@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+langgraph
+langchain-openai
+pydantic
+python-dotenv
+requests
+python-multipart

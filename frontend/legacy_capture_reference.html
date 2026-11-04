@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Idea Vault</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    background: #0f0f10;
+    color: #eee;
+  }
+  h1 { font-size: 1.3rem; font-weight: 600; margin-bottom: 4px; }
+  p.sub { color: #999; margin-top: 0; font-size: 0.9rem; }
+  #worker-url {
+    width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333;
+    background: #1a1a1c; color: #eee; margin-bottom: 20px; font-size: 0.85rem;
+  }
+  .mic-row { display: flex; justify-content: center; margin: 32px 0; }
+  #mic-btn {
+    width: 90px; height: 90px; border-radius: 50%; border: none;
+    background: #d64545; color: white; font-size: 2rem; cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+  }
+  #mic-btn.recording { background: #ff2d2d; transform: scale(1.08); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(255,45,45,.5);} 100%{box-shadow:0 0 0 18px rgba(255,45,45,0);} }
+  #status { text-align: center; color: #999; min-height: 1.4em; margin-bottom: 24px; font-size: 0.9rem; }
+  .idea-card {
+    background: #1a1a1c; border: 1px solid #2a2a2c; border-radius: 12px;
+    padding: 16px; margin-bottom: 12px;
+  }
+  .idea-card h3 { margin: 0 0 6px; font-size: 1rem; }
+  .idea-card p { margin: 0 0 8px; font-size: 0.9rem; color: #ccc; line-height: 1.4; }
+  .idea-card .meta { font-size: 0.75rem; color: #888; }
+  .tag {
+    display: inline-block; background: #262628; color: #aaa; border-radius: 999px;
+    padding: 2px 9px; font-size: 0.72rem; margin-right: 4px;
+  }
+  #search { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333;
+    background: #1a1a1c; color: #eee; margin: 20px 0 12px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+  <h1>Idea Vault</h1>
+  <p class="sub">Speak it. It gets structured and saved automatically.</p>
+
+  <input id="worker-url" type="text" placeholder="https://idea-capture-worker.<your-subdomain>.workers.dev" />
+
+  <div class="mic-row">
+    <button id="mic-btn">&#127908;</button>
+  </div>
+  <div id="status">Tap to record</div>
+
+  <input id="search" type="text" placeholder="Search saved ideas..." />
+  <div id="ideas"></div>
+
+<script>
+  const micBtn = document.getElementById("mic-btn");
+  const statusEl = document.getElementById("status");
+  const ideasEl = document.getElementById("ideas");
+  const searchEl = document.getElementById("search");
+  const workerUrlEl = document.getElementById("worker-url");
+
+  workerUrlEl.value = localStorage.getItem("workerUrl") || "";
+  workerUrlEl.addEventListener("change", () => {
+    localStorage.setItem("workerUrl", workerUrlEl.value.trim());
+    loadIdeas();
+  });
+
+  function workerUrl() {
+    return (workerUrlEl.value || "").trim().replace(/\/$/, "");
+  }
+
+  let mediaRecorder, chunks = [], recording = false;
+
+  micBtn.addEventListener("click", async () => {
+    if (!workerUrl()) { statusEl.textContent = "Set your Worker URL above first."; return; }
+
+    if (!recording) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        chunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+        mediaRecorder.onstop = uploadRecording;
+        mediaRecorder.start();
+        recording = true;
+        micBtn.classList.add("recording");
+        statusEl.textContent = "Recording... tap again to stop";
+      } catch (err) {
+        statusEl.textContent = "Mic access denied: " + err.message;
+      }
+    } else {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach((t) => t.stop());
+      recording = false;
+      micBtn.classList.remove("recording");
+      statusEl.textContent = "Processing...";
+    }
+  });
+
+  async function uploadRecording() {
+    const blob = new Blob(chunks, { type: "audio/webm" });
+    const form = new FormData();
+    form.append("audio", blob, "note.webm");
+
+    try {
+      const res = await fetch(workerUrl() + "/capture", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "upload failed");
+      statusEl.textContent = "Saved: " + data.idea.title;
+      loadIdeas();
+    } catch (err) {
+      statusEl.textContent = "Error: " + err.message;
+    }
+  }
+
+  function renderIdeas(ideas) {
+    ideasEl.innerHTML = ideas.map((idea) => `
+      <div class="idea-card">
+        <h3>${escapeHtml(idea.title || "Untitled")}</h3>
+        <p>${escapeHtml(idea.structured_text || "")}</p>
+        <div class="meta">
+          ${(idea.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
+          &middot; ${new Date(idea.created_at).toLocaleString()}
+        </div>
+      </div>
+    `).join("") || '<p style="color:#666;text-align:center;">No ideas yet.</p>';
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  let searchTimer;
+  searchEl.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadIdeas, 350);
+  });
+
+  async function loadIdeas() {
+    if (!workerUrl()) return;
+    const q = searchEl.value.trim();
+    const endpoint = workerUrl() + "/ideas?limit=30" + (q ? "&q=" + encodeURIComponent(q) : "");
+    try {
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      if (data.ideas) renderIdeas(data.ideas);
+    } catch (err) {
+      // silent — worker URL likely not set up yet
+    }
+  }
+
+  loadIdeas();
+</script>
+</body>
+</html>
