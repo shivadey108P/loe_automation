@@ -1,0 +1,22 @@
+{
+  "_comment": "Add this under 'mcpServers' in your Claude Desktop / Claude Code MCP config. Uses Supabase's official MCP server via npx — no install step needed.",
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=<YOUR_SUPABASE_PROJECT_REF>"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "<YOUR_SUPABASE_PERSONAL_ACCESS_TOKEN>"
+      }
+    }
+  },
+  "_notes": [
+    "Project ref: found in Supabase project URL, e.g. https://abcdefgh.supabase.co -> ref is 'abcdefgh'.",
+    "Personal access token: Supabase dashboard -> Account -> Access Tokens -> Generate new token.",
+    "Once connected, you can ask Claude things like 'show me my last 10 ideas' or 'find ideas tagged fomo' directly.",
+    "For read-only safety, you can add --read-only to args if you only want Claude to query, not modify, the table."
+  ]
+}

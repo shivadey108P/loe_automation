@@ -1,0 +1,16 @@
+[project]
+name = "social-media-automation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]==0.141.1",
+    "langchain-openai>=1.6.2",
+    "langgraph>=1.2.11",
+    "pydantic>=2.13.5",
+    "python-dotenv==1.0.0",
+    "python-multipart>=0.0.32",
+    "requests==2.32.3",
+    "uvicorn[standard]>=0.52.4",
+]
