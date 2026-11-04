@@ -1,30 +1,47 @@
 import { Loader2, Mic, Send } from 'lucide-react'
 import { useState } from 'react'
 import { ChatBubble, type ChatMessage } from '../components/ChatBubble'
+import { api, type Idea } from '../lib/api'
 import { useVoiceCapture } from '../lib/useVoiceCapture'
 
-const ACK_TEXT =
-  "Got it — saved as a new idea. Head to Ideas whenever you want to refine the details."
+const ackText = (idea: Idea) =>
+  `Saved: "${idea.title ?? 'Untitled'}". Head to Ideas whenever you want to refine the details.`
 
 export function Capture() {
   const [text, setText] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [streamingId, setStreamingId] = useState<string | null>(null)
 
-  const voice = useVoiceCapture((transcript) =>
-    setText((t) => (t ? `${t} ${transcript}` : transcript)),
-  )
+  const [busy, setBusy] = useState(false)
 
-  function handleCapture() {
-    if (!text.trim()) return
+  function addExchange(userText: string, assistantText: string) {
     const ackId = crypto.randomUUID()
     setMessages((m) => [
       ...m,
-      { id: crypto.randomUUID(), role: 'user', text: text.trim() },
-      { id: ackId, role: 'assistant', text: ACK_TEXT },
+      { id: crypto.randomUUID(), role: 'user', text: userText },
+      { id: ackId, role: 'assistant', text: assistantText },
     ])
     setStreamingId(ackId)
-    setText('')
+  }
+
+  const voice = useVoiceCapture(async (audio, filename) => {
+    const idea = await api.captureAudio(audio, filename)
+    addExchange(idea.raw_text, ackText(idea))
+  })
+
+  async function handleCapture() {
+    const raw = text.trim()
+    if (!raw || busy) return
+    setBusy(true)
+    try {
+      const idea = await api.captureText(raw)
+      addExchange(raw, ackText(idea))
+      setText('')
+    } catch (e) {
+      addExchange(raw, `Couldn't save that: ${e instanceof Error ? e.message : 'unknown error'}`)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -55,9 +72,10 @@ export function Capture() {
         {voice.state === 'transcribing' && (
           <div className="mb-2 flex items-center gap-2 text-xs text-violet-600 dark:text-violet-400">
             <Loader2 size={12} className="animate-spin" />
-            Transcribing and cleaning up your note...
+            Transcribing and saving your note...
           </div>
         )}
+        {voice.error && <p className="mb-2 text-xs text-red-600 dark:text-red-400">{voice.error}</p>}
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -95,7 +113,7 @@ export function Capture() {
           <button
             type="button"
             onClick={handleCapture}
-            disabled={!text.trim() || voice.state !== 'idle'}
+            disabled={!text.trim() || busy || voice.state !== 'idle'}
             className="flex items-center gap-2 rounded-full bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-violet-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Capture

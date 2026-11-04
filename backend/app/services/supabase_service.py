@@ -22,18 +22,18 @@ def save_idea_request(base_url, raw_text, structured: dict):
 
 
 def list_ideas_url(base_url, q=None, limit=20):
-    url = f"{base_url}/rest/v1/ideas?select=*&order=created_at.desc&limit={limit}"
+    url = f"{base_url}/rest/v1/ideas?select=*&order=created_at.desc&limit={int(limit)}"
     if q:
-        url += f"&or=(title.ilike.*{quote(q)}*,structured_text.ilike.*{quote(q)}*,raw_text.ilike.*{quote(q)}*)"
+        url += f"&or=(title.ilike.*{quote(q, safe='')}*,structured_text.ilike.*{quote(q, safe='')}*,raw_text.ilike.*{quote(q, safe='')}*)"
     return url
 
 
 def get_idea_url(base_url, idea_id):
-    return f"{base_url}/rest/v1/ideas?id=eq.{idea_id}&select=*"
+    return f"{base_url}/rest/v1/ideas?id=eq.{quote(str(idea_id), safe='')}&select=*"
 
 
 def get_messages_url(base_url, idea_id):
-    return f"{base_url}/rest/v1/idea_messages?idea_id=eq.{idea_id}&select=*&order=created_at.asc"
+    return f"{base_url}/rest/v1/idea_messages?idea_id=eq.{quote(str(idea_id), safe='')}&select=*&order=created_at.asc"
 
 
 def insert_message_request(base_url, idea_id, role, content, proposal):
@@ -43,7 +43,7 @@ def insert_message_request(base_url, idea_id, role, content, proposal):
 
 
 def update_idea_request(base_url, idea_id, fields):
-    return f"{base_url}/rest/v1/ideas?id=eq.{idea_id}", fields
+    return f"{base_url}/rest/v1/ideas?id=eq.{quote(str(idea_id), safe='')}", fields
 
 
 def apply_proposal_fields(proposal: dict):

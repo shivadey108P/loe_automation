@@ -1,12 +1,7 @@
 import { Lightbulb, Plus, Settings, X } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
-
-// Stub data — replaced with a real GET /ideas fetch once this shell is wired to the backend.
-const RECENT_IDEAS = [
-  { id: '1', title: 'Short-form clip on prompt caching', status: 'refined' },
-  { id: '2', title: 'Carousel: 5 LangGraph gotchas', status: 'captured' },
-  { id: '3', title: 'Voice note — pricing page rewrite', status: 'captured' },
-]
+import { useEffect, useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { api, type Idea } from '../lib/api'
 
 const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -28,6 +23,13 @@ function StatusDot({ status, className = '' }: { status: string; className?: str
 }
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const [recent, setRecent] = useState<Idea[]>([])
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    api.listIdeas(undefined, 8).then(setRecent).catch(() => setRecent([]))
+  }, [pathname])
+
   return (
     <div className="flex h-full w-full flex-col gap-4 p-3">
       <div className="flex items-center justify-between px-1">
@@ -70,7 +72,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           Recent
         </p>
         <div className="flex flex-col gap-0.5 overflow-y-auto">
-          {RECENT_IDEAS.map((idea) => (
+          {recent.map((idea) => (
             <NavLink
               key={idea.id}
               to={`/ideas/${idea.id}`}
@@ -84,7 +86,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               }
             >
               <StatusDot status={idea.status} className="mt-1.5" />
-              <span className="line-clamp-2">{idea.title}</span>
+              <span className="line-clamp-2">{idea.title ?? idea.raw_text.slice(0, 60)}</span>
             </NavLink>
           ))}
         </div>

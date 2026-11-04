@@ -1,14 +1,7 @@
 import { Search } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-// Stub data — replaced with a real GET /ideas fetch once this shell is wired to the backend.
-const IDEAS = [
-  { id: '1', title: 'Short-form clip on prompt caching', status: 'refined', updated: '2h ago' },
-  { id: '2', title: 'Carousel: 5 LangGraph gotchas', status: 'captured', updated: '1d ago' },
-  { id: '3', title: 'Voice note — pricing page rewrite', status: 'captured', updated: '3d ago' },
-  { id: '4', title: 'Thread: why we moved off custom calendar UI', status: 'used', updated: '1w ago' },
-]
+import { api, type Idea } from '../lib/api'
 
 const statusStyles: Record<string, string> = {
   refined: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
@@ -19,7 +12,21 @@ const statusStyles: Record<string, string> = {
 
 export function Ideas() {
   const [query, setQuery] = useState('')
-  const filtered = IDEAS.filter((idea) => idea.title.toLowerCase().includes(query.trim().toLowerCase()))
+  const [ideas, setIdeas] = useState<Idea[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      api
+        .listIdeas(query.trim() || undefined)
+        .then((rows) => {
+          setIdeas(rows)
+          setError(null)
+        })
+        .catch((e: Error) => setError(e.message))
+    }, 250)
+    return () => clearTimeout(t)
+  }, [query])
 
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
@@ -41,12 +48,13 @@ export function Ideas() {
         />
       </div>
 
-      {filtered.length === 0 && (
-        <p className="py-8 text-center text-sm text-gray-400">No ideas match "{query}".</p>
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {!error && ideas.length === 0 && (
+        <p className="py-8 text-center text-sm text-gray-400">{query ? `No ideas match "${query}".` : 'No ideas yet.'}</p>
       )}
 
       <div className="flex flex-col gap-2">
-        {filtered.map((idea) => (
+        {ideas.map((idea) => (
           <Link
             key={idea.id}
             to={`/ideas/${idea.id}`}
@@ -54,12 +62,12 @@ export function Ideas() {
           >
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
-                {idea.title}
+                {idea.title ?? idea.raw_text.slice(0, 80)}
               </p>
-              <p className="mt-0.5 text-xs text-gray-400">{idea.updated}</p>
+              <p className="mt-0.5 text-xs text-gray-400">{new Date(idea.created_at).toLocaleDateString()}</p>
             </div>
             <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[idea.status]}`}
+              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[idea.status] ?? ''}`}
             >
               {idea.status}
             </span>

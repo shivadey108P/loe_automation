@@ -1,4 +1,5 @@
-import { Moon, Sun } from 'lucide-react'
+import { LogOut, Moon, Sun } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import { useTheme } from '../lib/useTheme'
 
 export function Settings() {
@@ -23,6 +24,17 @@ export function Settings() {
           >
             {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
             {theme === 'dark' ? 'Dark' : 'Light'}
+          </button>
+        </div>
+        <div className="flex items-center justify-between border-t border-gray-200 p-4 dark:border-gray-800">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Account</p>
+          <button
+            type="button"
+            onClick={() => supabase.auth.signOut()}
+            className="flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+          >
+            <LogOut size={14} />
+            Sign out
           </button>
         </div>
       </div>
