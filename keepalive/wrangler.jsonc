@@ -1,0 +1,7 @@
+{
+  "name": "idea-vault-keepalive",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-03",
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "vars": { "TARGET_URL": "https://idea-vault-api-86nn.onrender.com" }
+}
