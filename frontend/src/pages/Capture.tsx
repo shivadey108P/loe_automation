@@ -13,6 +13,7 @@ export function Capture() {
   const [streamingId, setStreamingId] = useState<string | null>(null)
 
   const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState<{ errorId: string; raw: string } | null>(null)
 
   function addExchange(userText: string, assistantText: string) {
     const ackId = crypto.randomUUID()
@@ -29,19 +30,41 @@ export function Capture() {
     addExchange(idea.raw_text, ackText(idea))
   })
 
-  async function handleCapture() {
-    const raw = text.trim()
-    if (!raw || busy) return
+  // Saves `raw`. `replaceId` is the previous error bubble when retrying, so errors don't pile up.
+  async function save(raw: string, replaceId?: string) {
     setBusy(true)
+    setFailed(null)
     try {
       const idea = await api.captureText(raw)
-      addExchange(raw, ackText(idea))
-      setText('')
+      const ackId = crypto.randomUUID()
+      setMessages((m) => [
+        ...m.filter((x) => x.id !== replaceId),
+        { id: ackId, role: 'assistant', text: ackText(idea) },
+      ])
+      setStreamingId(ackId)
     } catch (e) {
-      addExchange(raw, `Couldn't save that: ${e instanceof Error ? e.message : 'unknown error'}`)
+      const errorId = crypto.randomUUID()
+      const reason = e instanceof Error ? e.message : 'unknown error'
+      setMessages((m) => [
+        ...m.filter((x) => x.id !== replaceId),
+        { id: errorId, role: 'assistant', text: `Couldn't save that: ${reason}` },
+      ])
+      setFailed({ errorId, raw })
     } finally {
       setBusy(false)
     }
+  }
+
+  function handleCapture() {
+    const raw = text.trim()
+    if (!raw || busy) return
+    setMessages((m) => [...m, { id: crypto.randomUUID(), role: 'user', text: raw }])
+    setText('') // clear right away; Retry below re-sends the same text if the save fails
+    void save(raw)
+  }
+
+  function handleRetry() {
+    if (failed && !busy) void save(failed.raw, failed.errorId)
   }
 
   return (
@@ -65,6 +88,21 @@ export function Capture() {
               onStreamDone={() => setStreamingId(null)}
             />
           ))}
+          {busy && (
+            <div className="flex items-center gap-2 text-xs text-violet-600 dark:text-violet-400">
+              <Loader2 size={12} className="animate-spin" />
+              Structuring and saving...
+            </div>
+          )}
+          {failed && !busy && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="self-start rounded-full border border-violet-300 px-3 py-1 text-xs text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-500/10"
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
 

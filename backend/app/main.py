@@ -11,12 +11,14 @@ from pydantic import BaseModel, Field
 
 from app.auth import require_user
 from app.config import CORS_ORIGINS
+from app.errors import register_error_handlers
 from app.graphs.capture_graph import structure
 from app.graphs.refine_graph import propose_refinement
 from app.services.supabase_service import apply_proposal_fields, latest_proposal
 from app.tools import openai_tool, supabase_tool
 
 app = FastAPI(title="Idea Vault API")
+register_error_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
