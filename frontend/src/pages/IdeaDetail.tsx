@@ -79,7 +79,7 @@ export function IdeaDetail() {
   }
 
   return (
-    <div className="mx-auto flex h-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
+    <div className="mx-auto flex min-h-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
       <div className="flex items-center justify-between">
         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
           {idea.status}
@@ -98,7 +98,7 @@ export function IdeaDetail() {
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{idea.title ?? 'Untitled'}</h1>
         {idea.category && <p className="text-xs text-gray-400">{idea.category}</p>}
         {idea.summary && <p className="text-sm text-gray-600 dark:text-gray-300">{idea.summary}</p>}
-        <p className="max-h-60 overflow-y-auto text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+        <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
           {idea.structured_text ?? idea.raw_text}
         </p>
         {!!idea.tags?.length && (
@@ -112,7 +112,7 @@ export function IdeaDetail() {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+      <div className="flex min-h-64 flex-1 flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
         <p className="text-xs font-medium tracking-wide text-gray-400 uppercase">Refine with AI</p>
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-sm text-gray-400">
@@ -145,7 +145,7 @@ export function IdeaDetail() {
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       </div>
 
-      <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white p-1.5 pl-4 dark:border-gray-800 dark:bg-gray-900">
+      <div className="sticky bottom-0 flex items-center gap-2 rounded-full border border-gray-200 bg-white p-1.5 pl-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
